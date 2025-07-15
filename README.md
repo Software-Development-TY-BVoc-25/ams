@@ -4,18 +4,18 @@ A comprehensive web-based application built with PHP and MySQL to manage student
 
 ## 📋 Table of Contents
 
--   [Features](#features)
--   [Tech Stack](#tech-stack)
--   [Prerequisites](#prerequisites)
--   [Development Environment Setup](#development-environment-setup)
--   [Installation Guide](#installation-guide)
--   [Project Structure](#project-structure)
--   [Configuration](#configuration)
--   [Usage](#usage)
--   [Development Workflow](#development-workflow)
--   [Troubleshooting](#troubleshooting)
--   [Contributing](#contributing)
--   [License](#license)
+-   [Features](#-features)
+-   [Tech Stack](#-tech-stack)
+-   [Prerequisites](#-prerequisites)
+-   [Development Environment Setup](#-development-environment-setup)
+-   [Installation Guide](#-installation-guide)
+-   [Project Structure](#-project-structure)
+-   [Configuration](#️-configuration)
+-   [Usage](#-usage)
+-   [Development Workflow](#-development-workflow)
+-   [Troubleshooting](#-troubleshooting)
+-   [Contributing](#-contributing)
+-   [License](#-license)
 
 ## ✨ Features
 
