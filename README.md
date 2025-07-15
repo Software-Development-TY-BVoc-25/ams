@@ -363,7 +363,7 @@ important!: in `git checkout -b feature/your-feature-name` "feature" remains con
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License – see the [LICENSE](./LICENSE) file for details.
 
 ---
 
