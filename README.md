@@ -276,19 +276,17 @@ while ($row = mysqli_fetch_assoc($result)) {
 
 ```bash
 # Create feature branch
-git checkout -b feature/your-feature-name
+git checkout -b your-name
 
 # Make changes and commit
 git add .
 git commit -m "Add student management functionality"
 
 # Push branch
-git push origin feature/your-feature-name
+git push origin your-name
 
 # Create pull request via GitHub
 ```
-
-important!: in `git checkout -b feature/your-feature-name` "feature" remains constant and "your-feature-name" will change - don't just copy paste it
 
 ### Code Style
 
