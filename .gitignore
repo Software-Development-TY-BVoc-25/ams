@@ -1,0 +1,23 @@
+# Ignore system files
+.DS_Store
+Thumbs.db
+
+# Ignore environment files
+# .env
+# .env.*
+
+# Ignore log files
+*.log
+
+# Ignore OS generated files
+*.swp
+*.swo
+
+# Ignore compiled files
+*.class
+*.pyc
+*.o
+*.out
+
+# Ignore uploads or user-generated content (customize as needed)
+uploads/

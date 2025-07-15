@@ -1,0 +1,8 @@
+nav .hover-bg-primary:hover {
+	color: rgb(0, 118, 209) !important;
+}
+
+nav .active {
+    background-color: #0d3673;
+	color: rgb(239, 248, 255) !important;
+}
