@@ -160,8 +160,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['csv_file'])) {
     } elseif ($file['size'] > 5 * 1024 * 1024) { // 5MB limit
         $message = "File size too large. Maximum 5MB allowed.";
         $messageType = "danger";
-    } elseif (!in_array(pathinfo($file['name'], PATHINFO_EXTENSION), ['csv'])) {
-        $message = "Only CSV files are allowed.";
+    } elseif (!in_array(strtolower(pathinfo($file['name'], PATHINFO_EXTENSION)), ['csv']) || 
+              !in_array(mime_content_type($file['tmp_name']), ['text/csv', 'application/vnd.ms-excel'])) {
+        $message = "Only valid CSV files are allowed.";
         $messageType = "danger";
     } else {
         // Process CSV file using PHP's built-in functions
