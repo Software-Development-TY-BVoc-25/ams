@@ -299,15 +299,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['csv_file'])) {
             fclose($handle);
 
             // Set success/error message
-            if ($successCount > 0 && $errorCount == 0) {
-                $message = "Successfully imported $successCount attendance records.";
-                $messageType = "success";
-            } elseif ($successCount > 0) {
-                $message = "Imported $successCount records with $errorCount errors.";
-                $messageType = "warning";
-            } else {
-                $message = "Import failed. No records were imported.";
-                $messageType = "danger";
+            if (!$headerError) { // Skip if a header error was detected
+                if ($successCount > 0 && $errorCount == 0) {
+                    $message = "Successfully imported $successCount attendance records.";
+                    $messageType = "success";
+                } elseif ($successCount > 0) {
+                    $message = "Imported $successCount records with $errorCount errors.";
+                    $messageType = "warning";
+                } else {
+                    $message = "Import failed. No records were imported.";
+                    $messageType = "danger";
+                }
             }
         } else {
             $message = "Error reading CSV file.";
