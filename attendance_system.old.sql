@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jul 14, 2025 at 09:05 AM
+-- Generation Time: Jul 05, 2025 at 10:19 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -24,10 +24,11 @@ SET time_zone = "+00:00";
 -- --------------------------------------------------------
 
 --
--- Table structure for table `attendance_system`
+-- Table structure for table `attendance`
 --
 
 CREATE TABLE `attendance` (
+  `Attendance_ID` int(11) NOT NULL,
   `Student_ID` int(11) DEFAULT NULL,
   `Subject_ID` int(11) DEFAULT NULL,
   `Teacher_ID` int(11) DEFAULT NULL,
@@ -50,24 +51,6 @@ CREATE TABLE `class` (
   `Department_ID` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `class`
---
-
-INSERT INTO `class` (`Class_ID`, `Class_Name`, `Division`, `Department_ID`) VALUES
-(1, 'FY-BCA', 'A', 1),
-(2, ' FY-BCA', 'B', 1),
-(3, 'SY-BCA', 'A', 1),
-(4, 'SY-BCA', 'B', 1),
-(5, 'TY-BCA', 'A', 1),
-(6, 'TY-BCA', 'B', 1),
-(7, 'FY-BVOC', NULL, 2),
-(8, 'FY-BVOC', NULL, 2),
-(9, 'SY-BVOC', NULL, 2),
-(10, 'SY-BVOC', NULL, 2),
-(11, 'TY-BVOC', NULL, 2),
-(12, 'TY-BVOC', NULL, 2);
-
 -- --------------------------------------------------------
 
 --
@@ -78,14 +61,6 @@ CREATE TABLE `department` (
   `Department_ID` int(11) NOT NULL,
   `Department_Name` varchar(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `department`
---
-
-INSERT INTO `department` (`Department_ID`, `Department_Name`) VALUES
-(1, 'BCA'),
-(2, 'BVOC');
 
 -- --------------------------------------------------------
 
@@ -112,43 +87,9 @@ CREATE TABLE `subject` (
   `Subject_ID` int(11) NOT NULL,
   `Subject_Name` varchar(255) DEFAULT NULL,
   `Department_ID` int(11) DEFAULT NULL,
-  `Semester` int(11) NOT NULL,
   `Practical` tinyint(1) DEFAULT NULL,
   `theory` tinyint(1) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `subject`
---
-
-INSERT INTO `subject` (`Subject_ID`, `Subject_Name`, `Department_ID`, `Semester`, `Practical`, `theory`) VALUES
-(1, 'Computer Fundamentals and Programming Concepts  ', 2, 1, 1, 1),
-(2, 'Relational Database Management System ', 2, 1, 1, 1),
-(3, 'Environmental Studies II ', 2, 1, 1, 0),
-(4, 'SSC/Q0501 Software Developer ', 2, 1, 1, 1),
-(5, 'Object-Oriented Concepts using Java\r\n', 2, 2, 1, 1),
-(6, 'Multimedia Technologies', 2, 2, 1, 1),
-(7, 'Quantitative Techniques', 2, 2, 0, 1),
-(8, 'Associate-Desktop Publishing', 2, 2, 1, 1),
-(9, 'data structures', 2, 3, 1, 1),
-(10, 'Audio and visual media', 2, 3, 1, 1),
-(11, 'Reasoning Techniques', 2, 3, 0, 1),
-(12, 'Software Laboratory', 2, 3, 1, 0),
-(13, 'Associate-Desktop Publishing', 2, 3, 1, 0),
-(14, 'python programming', 2, 4, 1, 1),
-(15, 'software engineering and testing', 2, 4, 1, 1),
-(16, 'creative thinking', 2, 4, 0, 1),
-(17, 'software laboratory-IV', 2, 4, 1, 0),
-(18, 'associate desktop publishing', 2, 4, 1, 1),
-(19, 'Mobile Application Development', 2, 5, 1, 1),
-(20, 'Human Computer Interaction', 2, 5, 0, 1),
-(21, 'Advance Quantitative Techniques', 2, 5, 0, 1),
-(22, 'Software Laboratory', 2, 5, 1, 0),
-(23, 'Software Developer', 2, 5, 1, 1),
-(24, 'RDBMS', 2, 6, 1, 0),
-(25, 'computer networks', 2, 6, 0, 1),
-(26, 'entrepreneurship development', 2, 6, 0, 1),
-(27, 'software laboratory-IV', 2, 6, 1, 0);
 
 -- --------------------------------------------------------
 
@@ -193,15 +134,6 @@ CREATE TABLE `user_table` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Dumping data for table `user_table`
---
-
-INSERT INTO `user_table` (`User_ID`, `User_Name`, `Pass`, `Email`, `Time_Stamp`, `is_active`) VALUES
-(1, 'Admin', 'Admin123', 'sejalpednekar07@gmail.com', '2025-07-08 11:41:43', 0),
-(2, 'Principal', 'Principal123', 'sejalpednekar07@gmail.com', '2025-07-08 11:41:43', 0),
-(3, 'Teacher', 'Teacher123', 'sejalpednekar07@gmail.com', '2025-07-08 11:41:43', 0);
-
---
 -- Indexes for dumped tables
 --
 
@@ -209,6 +141,7 @@ INSERT INTO `user_table` (`User_ID`, `User_Name`, `Pass`, `Email`, `Time_Stamp`,
 -- Indexes for table `attendance`
 --
 ALTER TABLE `attendance`
+  ADD PRIMARY KEY (`Attendance_ID`),
   ADD KEY `Student_ID` (`Student_ID`),
   ADD KEY `Subject_ID` (`Subject_ID`),
   ADD KEY `Teacher_ID` (`Teacher_ID`),
