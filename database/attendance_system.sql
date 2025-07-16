@@ -126,7 +126,7 @@ INSERT INTO `subject` (`Subject_ID`, `Subject_Name`, `Department_ID`, `Semester`
 (2, 'Relational Database Management System ', 2, 1, 1, 1),
 (3, 'Environmental Studies II ', 2, 1, 1, 0),
 (4, 'SSC/Q0501 Software Developer ', 2, 1, 1, 1),
-(5, 'Object-Oriented Concepts using Java\r\n', 2, 2, 1, 1),
+(5, 'Object-Oriented Concepts using Java', 2, 2, 1, 1),
 (6, 'Multimedia Technologies', 2, 2, 1, 1),
 (7, 'Quantitative Techniques', 2, 2, 0, 1),
 (8, 'Associate-Desktop Publishing', 2, 2, 1, 1),
