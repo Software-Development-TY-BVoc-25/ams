@@ -56,7 +56,7 @@ CREATE TABLE `class` (
 
 INSERT INTO `class` (`Class_ID`, `Class_Name`, `Division`, `Department_ID`) VALUES
 (1, 'FY-BCA', 'A', 1),
-(2, ' FY-BCA', 'B', 1),
+(2, 'FY-BCA', 'B', 1),
 (3, 'SY-BCA', 'A', 1),
 (4, 'SY-BCA', 'B', 1),
 (5, 'TY-BCA', 'A', 1),
