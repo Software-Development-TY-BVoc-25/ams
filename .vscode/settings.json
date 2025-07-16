@@ -14,7 +14,7 @@
 	// PHP-specific configuration
 	"php.validate.enable": false,
 	"php.suggest.basic": false,
-	"php.validate.executablePath": "C:\\xampp\\php.exe",
+	"php.validate.executablePath": "C:\\xampp\\php\\php.exe",
 
 	"[php]": {
 		"editor.defaultFormatter": "bmewburn.vscode-intelephense-client",
@@ -32,22 +32,6 @@
 		"**/.history/**",
 		"**/.vscode/**",
 		"**/assets/**"
-	],
-	"intelephense.stubs": [
-		"Core",
-		"date",
-		"json",
-		"PDO",
-		"mysqli",
-		"curl",
-		"gd",
-		"mbstring",
-		"xml",
-		"zip",
-		"openssl",
-		"xdebug",
-		"soap",
-		"session"
 	],
 
 	"intelephense.telemetry.enabled": false,
