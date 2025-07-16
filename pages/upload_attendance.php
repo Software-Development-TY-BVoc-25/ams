@@ -177,7 +177,9 @@ $page_css =
         const files = e.dataTransfer.files;
         if (files.length > 0) {
             const file = files[0];
-            fileInput.files = files;
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(file);
+            fileInput.files = dataTransfer.files;
             handleFileSelection(file);
         }
     });
