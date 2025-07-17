@@ -37,14 +37,14 @@ $page_css =
 <div class="container">
     <div class="row justify-content-center">
         <div class="col-md-8 col-lg-6">
-            <h2 class="mb-4 text-center h1 text-dark">Upload Attendance</h2>
+            <h2 class="mb-4 text-center h1 text-dark">Upload Student Data</h2>
 
             <form id="uploadForm" method="POST" enctype="multipart/form-data">
                 <div class="upload-area mb-4" onclick="document.getElementById('csvFile').click()">
                     <i class="fas fa-cloud-upload-alt fa-3x text-success mb-3"></i>
-                    <h5 class="text-success">Click to select CSV file</h5>
+                    <h5 class="text-success">Click to select Student CSV file</h5>
                     <p class="text-muted mb-0">or drag and drop file here</p>
-                    <p class="text-muted small mb-0 mt-2">Max file size: 10MB | Accepted format: .csv</p>
+                    <p class="text-muted small mb-0 mt-2">Max file size: 10MB | Accepted format: .csv | For student data import</p>
                     <input type="file" id="csvFile" name="csvFile" class="file-input" accept=".csv">
                 </div>
 
@@ -208,20 +208,31 @@ $page_css =
         const formData = new FormData(this);
 
         // Submit form via AJAX
-        fetch('./handlers/upload_attendance_handler.php', {
+        fetch('./handlers/add_students_handler.php', {
                 method: 'POST',
                 body: formData
             })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    showValidationMessage(data.message, false);
+                    let message = data.message;
+                    if (data.data && data.data.inserted_rows !== undefined) {
+                        message += ` (${data.data.inserted_rows} records inserted)`;
+                    }
+                    showValidationMessage(message, false);
                     // Reset form on success
                     this.reset();
                     fileInfo.classList.add('d-none');
-                    setTimeout(() => hideValidationMessage(), 3000);
+                    setTimeout(() => hideValidationMessage(), 5000);
                 } else {
-                    showValidationMessage(data.message, true);
+                    let message = data.message;
+                    if (data.data && data.data.error_count) {
+                        message += ` (${data.data.error_count} errors found)`;
+                    }
+                    showValidationMessage(message, true);
+                    if (data.data && data.data.errors) {
+                        console.error('Validation errors:', data.data.errors);
+                    }
                 }
             })
             .catch(error => {
