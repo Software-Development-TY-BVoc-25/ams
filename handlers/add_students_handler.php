@@ -1,10 +1,6 @@
 <?php
-// CSV Upload Handler for Student Data
 
-// Include database configuration
-require_once dirname(__DIR__) . '/config.php';
-
-// Set response header for JSON
+include "../config.php";
 header('Content-Type: application/json');
 
 // Initialize response
@@ -14,182 +10,149 @@ $response = [
     'data' => []
 ];
 
-try {
-    // Check if file was uploaded
-    if (!isset($_FILES['csvFile']) || $_FILES['csvFile']['error'] !== UPLOAD_ERR_OK) {
-        throw new Exception('No file uploaded or upload error occurred');
+$uploadDir = dirname(__DIR__) . '/uploads/';
+
+// this function validates the uploaded CSV file to check for required headers and data types
+function validateFile($filePath) {
+    $expectedHeaders = ['Student_ID', 'Student_Name', 'Student_Rollno', 'Class_ID', 'Department_ID', 'Subject_ID'];
+    $errors = [];
+    $rowCount = 0;
+    $validRows = 0;
+
+    if (!file_exists($filePath)) {
+        return ['errors' => ['File not found'], 'validRows' => 0, 'rowCount' => 0];
     }
 
-    $uploadedFile = $_FILES['csvFile'];
-
-    // Basic validation
-    $fileExtension = strtolower(pathinfo($uploadedFile['name'], PATHINFO_EXTENSION));
-    if ($fileExtension !== 'csv') {
-        throw new Exception('Invalid file type. Only CSV files are allowed.');
+    $handle = fopen($filePath, 'r');
+    if (!$handle) {
+        return ['errors' => ['Unable to open file'], 'validRows' => 0, 'rowCount' => 0];
     }
 
-    // Create uploads directory if it doesn't exist
-    $uploadDir = dirname(__DIR__) . '/uploads/';
-    if (!is_dir($uploadDir)) {
-        mkdir($uploadDir, 0755, true);
+    $headers = fgetcsv($handle);
+    if (!$headers) {
+        fclose($handle);
+        return ['errors' => ['Unable to read headers'], 'validRows' => 0, 'rowCount' => 0];
     }
 
-    // Generate unique filename
-    $fileName = 'attendance_' . date('Y-m-d_H-i-s') . '.csv';
-    $uploadPath = $uploadDir . $fileName;
+    // Check for missing headers
+    $missing = array_diff($expectedHeaders, $headers);
+    if (!empty($missing)) {
+        fclose($handle);
+        return ['errors' => ['Missing columns: ' . implode(', ', $missing)], 'validRows' => 0, 'rowCount' => 0];
+    }
 
-    // Move uploaded file
-    if (move_uploaded_file($uploadedFile['tmp_name'], $uploadPath)) {
+    // Map header positions
+    $headerMap = array_flip($headers);
 
-        // Process CSV and insert into database
-        $csvFile = fopen($uploadPath, 'r');
-        if (!$csvFile) {
-            // Delete file if can't read it
-            if (file_exists($uploadPath)) {
-                unlink($uploadPath);
-            }
-            throw new Exception('Could not read uploaded CSV file');
-        }
-
-        // Read header row
-        $headers = fgetcsv($csvFile);
-        if (!$headers) {
-            fclose($csvFile);
-            // Delete file on header read error
-            if (file_exists($uploadPath)) {
-                unlink($uploadPath);
-            }
-            throw new Exception('Could not read CSV headers');
-        }
-
-        // Expected CSV columns for student table
-        $expectedHeaders = ['Student_ID', 'Student_Name', 'Student_Rollno', 'Class_ID', 'Department_ID', 'Subject_ID'];
-
-        // Validate headers
-        $headerDiff = array_diff($expectedHeaders, $headers);
-        if (!empty($headerDiff)) {
-            fclose($csvFile);
-            // Delete file on validation error
-            if (file_exists($uploadPath)) {
-                unlink($uploadPath);
-            }
-            throw new Exception('Missing required columns: ' . implode(', ', $headerDiff));
-        }
-
-        // Process CSV data
-        $processedRows = 0;
-        $insertedRows = 0;
-        $errors = [];
-
-        // Prepare SQL statement
-        $stmt = $conn->prepare("INSERT INTO student (Student_ID, Student_Name, Student_Rollno, Class_ID, Department_ID, Subject_ID) VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE Student_Name = VALUES(Student_Name), Student_Rollno = VALUES(Student_Rollno), Class_ID = VALUES(Class_ID), Department_ID = VALUES(Department_ID), Subject_ID = VALUES(Subject_ID)");
-
-        if (!$stmt) {
-            fclose($csvFile);
-            // Delete file on database error
-            if (file_exists($uploadPath)) {
-                unlink($uploadPath);
-            }
-            throw new Exception('Database prepare failed: ' . $conn->error);
-        }
-
-        while (($row = fgetcsv($csvFile)) !== false) {
-            $processedRows++;
-
-            // Skip empty rows
-            if (empty(array_filter($row))) {
-                continue;
-            }
-
-            // Create associative array with headers
-            $rowData = array_combine($headers, $row);
-
-            // Validate row data
-            $rowErrors = [];
-
-            // Validate required fields
-            foreach ($expectedHeaders as $header) {
-                if (!isset($rowData[$header]) || trim($rowData[$header]) === '') {
-                    $rowErrors[] = "Missing {$header}";
-                }
-            }
-
-            // Validate numeric fields
-            if (isset($rowData['Student_ID']) && !is_numeric($rowData['Student_ID'])) {
-                $rowErrors[] = "Student_ID must be numeric";
-            }
-            if (isset($rowData['Student_Rollno']) && !is_numeric($rowData['Student_Rollno'])) {
-                $rowErrors[] = "Student_Rollno must be numeric";
-            }
-            if (isset($rowData['Class_ID']) && !is_numeric($rowData['Class_ID'])) {
-                $rowErrors[] = "Class_ID must be numeric";
-            }
-            if (isset($rowData['Department_ID']) && !is_numeric($rowData['Department_ID'])) {
-                $rowErrors[] = "Department_ID must be numeric";
-            }
-            if (isset($rowData['Subject_ID']) && !is_numeric($rowData['Subject_ID'])) {
-                $rowErrors[] = "Subject_ID must be numeric";
-            }
-
-            if (!empty($rowErrors)) {
-                $errors[] = "Row {$processedRows}: " . implode(', ', $rowErrors);
-                continue;
-            }
-
-            // Insert into database
-            $stmt->bind_param(
-                "isiiii",
-                intval($rowData['Student_ID']),
-                $rowData['Student_Name'],
-                intval($rowData['Student_Rollno']),
-                intval($rowData['Class_ID']),
-                intval($rowData['Department_ID']),
-                intval($rowData['Subject_ID'])
-            );
-
-            if ($stmt->execute()) {
-                $insertedRows++;
-            } else {
-                $errors[] = "Row {$processedRows}: Database error - " . $stmt->error;
+    // Validate each row
+    while (($row = fgetcsv($handle)) !== false) {
+        $rowCount++;
+        if (empty(array_filter($row))) continue; // skip empty rows
+        $rowErrors = [];
+        // Check required fields
+        foreach ($expectedHeaders as $header) {
+            $idx = $headerMap[$header];
+            if (!isset($row[$idx]) || trim($row[$idx]) === '') {
+                $rowErrors[] = "$header missing";
             }
         }
-
-        fclose($csvFile);
-        $stmt->close();
-
-        // Delete the uploaded file after processing
-        if (file_exists($uploadPath)) {
-            unlink($uploadPath);
+        // Check numeric fields
+        foreach (['Student_ID', 'Student_Rollno', 'Class_ID', 'Department_ID', 'Subject_ID'] as $header) {
+            $idx = $headerMap[$header];
+            if (isset($row[$idx]) && trim($row[$idx]) !== '' && !is_numeric($row[$idx])) {
+                $rowErrors[] = "$header must be numeric";
+            }
         }
-
-        // Prepare response
-        if (!empty($errors)) {
-            $response['success'] = false;
-            $response['message'] = 'Upload completed with errors';
-            $response['data'] = [
-                'errors' => $errors,
-                'total_rows' => $processedRows,
-                'inserted_rows' => $insertedRows,
-                'error_count' => count($errors)
-            ];
+        if (!empty($rowErrors)) {
+            $errors[] = "Row $rowCount: " . implode(', ', $rowErrors);
         } else {
-            $response['success'] = true;
-            $response['message'] = 'Upload successful - All student records processed';
-            $response['data'] = [
-                'filename' => $fileName,
-                'upload_date' => date('Y-m-d H:i:s'),
-                'file_size' => $uploadedFile['size'],
-                'total_rows' => $processedRows,
-                'inserted_rows' => $insertedRows
-            ];
+            $validRows++;
         }
-    } else {
-        throw new Exception('Failed to save file');
     }
-} catch (Exception $e) {
-    $response['success'] = false;
-    $response['message'] = $e->getMessage();
+    fclose($handle);
+    return ['errors' => $errors, 'validRows' => $validRows, 'rowCount' => $rowCount];
 }
 
-// Return JSON response
+//prepare the SQL statement
+$stmt = $conn->prepare(
+    "INSERT INTO student (Student_ID, Student_Name, Student_Rollno, Class_ID, Department_ID, Subject_ID)
+     VALUES (?, ?, ?, ?, ?, ?)
+     ON DUPLICATE KEY UPDATE
+        Student_Name = VALUES(Student_Name),
+        Student_Rollno = VALUES(Student_Rollno),
+        Class_ID = VALUES(Class_ID),
+        Department_ID = VALUES(Department_ID),
+        Subject_ID = VALUES(Subject_ID)"
+);
+
+
+
+//get the file from post
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (isset($_FILES['csvFile'])) {
+        $file = $_FILES['csvFile'];
+
+        //if uploads dir is present else create it
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+
+        //move the uploaded file to the uploads directory
+        $filePath = $uploadDir . basename($file['name']);
+        if (move_uploaded_file($file['tmp_name'], $filePath)) {
+            // Validate the file
+            $validation = validateFile($filePath);
+            if (!empty($validation['errors'])) {
+                $response['message'] = 'File validation failed: ' . implode('; ', $validation['errors']);
+            } else {
+
+                // Open the file again for inserting
+                $handle = fopen($filePath, 'r');
+                $headers = fgetcsv($handle); // skip header row
+                $insertedRows = 0;
+                $rowCount = 0;
+
+                while (($row = fgetcsv($handle)) !== false) {
+                    $rowCount++;
+                    if (empty(array_filter($row))) continue; // skip empty rows
+
+                    // Map header positions
+                    $headerMap = array_flip($headers);
+                    $rowData = [];
+                    foreach (['Student_ID', 'Student_Name', 'Student_Rollno', 'Class_ID', 'Department_ID', 'Subject_ID'] as $header) {
+                        $rowData[] = $row[$headerMap[$header]];
+                    }
+
+                    // Bind and execute
+                    $stmt->bind_param(
+                        "isiiii",
+                        $rowData[0], // Student_ID
+                        $rowData[1], // Student_Name
+                        $rowData[2], // Student_Rollno
+                        $rowData[3], // Class_ID
+                        $rowData[4], // Department_ID
+                        $rowData[5]  // Subject_ID
+                    );
+                    if ($stmt->execute()) {
+                        $insertedRows++;
+                    }
+                }
+                fclose($handle);
+
+                $response['success'] = true;
+                $response['message'] = "Upload successful. $insertedRows students added/updated.";
+                $response['data'] = [
+                    'inserted_rows' => $insertedRows,
+                    'total_rows' => $rowCount
+                ];
+            }
+        } else {
+            $response['message'] = 'Failed to move uploaded file';
+        }
+    } else {
+        $response['message'] = 'No file uploaded';
+    }
+}
+
+
 echo json_encode($response);
