@@ -1,0 +1,11 @@
+Student_ID,Student_Name,Student_Rollno,Class_ID,Department_ID,Subject_ID
+1,John Doe,101,1,1,1
+2,Jane Smith,102,1,1,1
+3,Mike Johnson,103,1,1,2
+4,Sarah Wilson,104,2,1,1
+5,David Brown,105,2,1,2
+6,Lisa Davis,106,3,1,3
+7,Tom Miller,107,3,1,3
+8,Emma Garcia,108,4,1,4
+9,Alex Martinez,109,4,1,4
+10,Sophie Anderson,110,5,1,5

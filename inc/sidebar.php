@@ -7,8 +7,8 @@ $sidebar_pages = [
         'icon' => 'bi-speedometer2'
     ],
     [
-        'url' => 'upload_attendance',
-        'label' => 'Upload Attendance',
+        'url' => 'add_students',
+        'label' => 'Add Students Data',
         'icon' => 'bi-upload'
     ],
     [
