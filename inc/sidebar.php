@@ -8,7 +8,7 @@ $sidebar_pages = [
     ],
     [
         'url' => 'add_students',
-        'label' => 'Add Students',
+        'label' => 'Add Students Data',
         'icon' => 'bi-upload'
     ],
     [
