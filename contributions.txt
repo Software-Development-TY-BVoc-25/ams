@@ -1,0 +1,13 @@
+khuhsal Naik - 2320719
+
+1. Built the student data upload feature:
+   - Designed and implemented the student data upload page (`pages/add_students.php`) with drag-and-drop CSV upload, client-side validation, and AJAX submission.
+   - Implemented the handler (`handlers/add_students_handler.php`) for processing uploaded CSV files, including server-side validation and database operations.
+2. Set up the entire project folder structure, organizing pages, handlers, assets, and configuration files.
+3. Developed backend cookie management for user sessions, year/semester selection, and preferences.
+4. Created the main application entry point (`index.php`) with dynamic page loading, custom CSS injection, and routing logic.
+5. Developed the sidebar component and integrated it into the application structure.
+6. Wrote the comprehensive project README (`README.md`) with setup instructions, usage, troubleshooting, and contribution guidelines.
+7. Configured `.htaccess` for clean URLs, asset/handler access, and directory listing prevention.
+8. Developed the database configuration file (`config.php`) for MySQL connection and session management.
+9. Set up VSCode workspace configuration and project code formatting using `.prettierrc` for consistent code style across the team.
