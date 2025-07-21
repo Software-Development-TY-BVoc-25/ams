@@ -1,46 +1,10 @@
-<?php
-$page_css =
-    "<style>
-        .upload-area {
-            border: 2px dashed #28a745;
-            border-radius: 8px;
-            padding: 3rem;
-            text-align: center;
-            background-color: #f8f9fa;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        .upload-area:hover {
-            background-color: #e8f5e8;
-            border-color: #1e7e34;
-        }
-        .upload-area.dragover {
-            background-color: #d4edda;
-            border-color: #1e7e34;
-        }
-        .file-input {
-            display: none;
-        }
-        .error-message {
-            color: #dc3545;
-            font-size: 0.875rem;
-            margin-top: 0.5rem;
-        }
-        .success-message {
-            color: #28a745;
-            font-size: 0.875rem;
-            margin-top: 0.5rem;
-        }
-    </style>";
-?>
-
 <div class="container">
-    <div class="row justify-content-center">
-        <div class="col-md-8 col-lg-6">
-            <h2 class="mb-4 text-center h1 text-dark">Upload Student Data</h2>
+    <div class="row">
+        <div class="">
+            <h2 class="mb-4 h1 text-dark">Add Students</h2>
 
-            <form id="uploadForm" method="POST" enctype="multipart/form-data">
-                <div class="upload-area mb-4" onclick="document.getElementById('csvFile').click()">
+            <form id="uploadForm" method="POST" class="w-100" enctype="multipart/form-data">
+                <div class="upload-area mb-4 w-100" onclick="document.getElementById('csvFile').click()">
                     <i class="fas fa-cloud-upload-alt fa-3x text-success mb-3"></i>
                     <h5 class="text-success">Click to select Student CSV file</h5>
                     <p class="text-muted mb-0">or drag and drop file here</p>
@@ -48,14 +12,14 @@ $page_css =
                     <input type="file" id="csvFile" name="csvFile" class="file-input" accept=".csv">
                 </div>
 
-                <div id="validationMessage" class="text-center d-none mb-3"></div>
+                <div id="validationMessage" class="text-start d-none mb-3"></div>
 
                 <div id="fileInfo" class="alert alert-info d-none">
                     <i class="fas fa-file-csv me-2"></i>
                     <span id="fileName"></span>
                 </div>
 
-                <div class="text-center">
+                <div>
                     <button type="submit" class="btn btn-primary w-100">
                         <i class="fas fa-upload me-2"></i>
                         Upload
