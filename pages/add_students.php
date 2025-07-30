@@ -1,8 +1,12 @@
+<?php
+$hide_filters = true;
+?>
+
+
 <div class="container">
     <div class="row">
-        <div class="">
-            <h2 class="mb-4 h1 text-dark">Add Students</h2>
-
+        <div>
+            <h2 class="mb-4 h1 text-dark mt-4">Add Students</h2>
             <form id="uploadForm" method="POST" class="w-100" enctype="multipart/form-data">
                 <div class="upload-area mb-4 w-100" onclick="document.getElementById('csvFile').click()">
                     <i class="fas fa-cloud-upload-alt fa-3x text-success mb-3"></i>
@@ -20,11 +24,13 @@
                 </div>
 
                 <div>
-                    <button type="submit" class="btn btn-primary w-100">
+                    <button type="submit" class="btn btn-primary w-100" id="uploadButton" disabled>
                         <i class="fas fa-upload me-2"></i>
                         Upload
                     </button>
                 </div>
+
+                <div id="csvPreview" class="table-responsive d-none mt-3"></div>
             </form>
         </div>
     </div>
@@ -36,14 +42,15 @@
     const fileInfo = document.getElementById('fileInfo');
     const fileName = document.getElementById('fileName');
     const validationMessage = document.getElementById('validationMessage');
-    const uploadButton = document.querySelector('button[type="submit"]');
+    const uploadButton = document.getElementById('uploadButton');
+    const csvPreview = document.getElementById('csvPreview');
+    const expectedColumns = [
+        'Student_Name', 'Student_Rollno', 'Department_Name', 'Year_Level', 'Division', 'Semester', 'Academic_Year'
+    ];
 
-    // File validation function
     function validateFile(file) {
-        const maxSize = 10 * 1024 * 1024; // 10MB in bytes
+        const maxSize = 10 * 1024 * 1024;
         const allowedExtensions = ['csv'];
-
-        // Check file extension
         const fileExtension = file.name.split('.').pop().toLowerCase();
         if (!allowedExtensions.includes(fileExtension)) {
             return {
@@ -51,79 +58,125 @@
                 message: 'Invalid file type. Please select a CSV file.'
             };
         }
-
-        // Check file size
         if (file.size > maxSize) {
             return {
                 valid: false,
                 message: 'File size too large. Maximum allowed size is 10MB.'
             };
         }
-
-        // Check if file is empty
         if (file.size === 0) {
             return {
                 valid: false,
                 message: 'File is empty. Please select a valid CSV file.'
             };
         }
-
         return {
             valid: true,
             message: 'File is valid and ready to upload.'
         };
     }
 
-    // Display validation message
+    function validateRow(row) {
+        let errors = [];
+        if (row.length !== expectedColumns.length) errors.push('Incorrect number of columns');
+        if (!row[0]) errors.push('Student_Name missing');
+        if (!/^\d+$/.test(row[1])) errors.push('Student_Rollno invalid');
+        if (!row[2]) errors.push('Department_Name missing');
+        if (!['fy', 'sy', 'ty'].includes(row[3].toLowerCase())) errors.push('Year_Level invalid');
+        if (row[4] && !/^[A-Za-z]$/.test(row[4])) errors.push('Division invalid');
+        if (!/^\d+$/.test(row[5])) errors.push('Semester invalid');
+        if (!/^\d{4}-\d{2}$/.test(row[6])) errors.push('Academic_Year invalid');
+        return errors;
+    }
+
+    function previewCSV(file) {
+        const reader = new FileReader();
+        reader.onload = e => {
+            const lines = e.target.result.split(/\r?\n/).filter(l => l.trim());
+            if (!lines.length) {
+                showValidationMessage('CSV file is empty.', true);
+                csvPreview.classList.add('d-none');
+                uploadButton.disabled = true;
+                return;
+            }
+            const header = lines[0].split(',').map(h => h.trim());
+            if (header.length !== expectedColumns.length || !header.every((h, i) => h === expectedColumns[i])) {
+                showValidationMessage('CSV header must be: ' + expectedColumns.join(', '), true);
+                csvPreview.classList.add('d-none');
+                uploadButton.disabled = true;
+                return;
+            }
+            let table = `<table class="table table-bordered"><thead><tr>`;
+            header.forEach(h => table += `<th>${h}</th>`);
+            table += `</tr></thead><tbody>`;
+            let hasErrors = false;
+            for (let i = 1; i < lines.length; i++) {
+                const row = lines[i].split(',').map(cell => cell.trim());
+                const errors = validateRow(row);
+                table += `<tr${errors.length ? ' class="table-danger error-row" data-error="' + encodeURIComponent(errors.join(', ')) + '"' : ''}>`;
+                row.forEach(cell => table += `<td>${cell}</td>`);
+                table += `</tr>`;
+                hasErrors = hasErrors || errors.length;
+            }
+            table += `</tbody></table>`;
+            csvPreview.innerHTML = table;
+            csvPreview.classList.remove('d-none');
+            uploadButton.disabled = hasErrors;
+            // Tooltip for error rows
+            setTimeout(() => {
+                document.querySelectorAll('.error-row').forEach(row => {
+                    row.addEventListener('mouseenter', function() {
+                        let tooltip = document.createElement('div');
+                        tooltip.className = 'csv-error-tooltip';
+                        tooltip.innerHTML = decodeURIComponent(row.getAttribute('data-error'));
+                        tooltip.style.position = 'absolute';
+                        tooltip.style.background = '#f8d7da';
+                        tooltip.style.color = '#721c24';
+                        tooltip.style.border = '1px solid #f5c6cb';
+                        tooltip.style.padding = '6px 12px';
+                        tooltip.style.borderRadius = '4px';
+                        tooltip.style.zIndex = '1000';
+                        tooltip.style.fontSize = '14px';
+                        tooltip.style.top = (row.getBoundingClientRect().top + window.scrollY + row.offsetHeight) + 'px';
+                        tooltip.style.left = (row.getBoundingClientRect().left + window.scrollX) + 'px';
+                        tooltip.classList.add('csv-tooltip-active');
+                        document.body.appendChild(tooltip);
+                        row._tooltip = tooltip;
+                    });
+                    row.addEventListener('mouseleave', function() {
+                        if (row._tooltip) {
+                            document.body.removeChild(row._tooltip);
+                            row._tooltip = null;
+                        }
+                    });
+                });
+            }, 100);
+            showValidationMessage(hasErrors ? 'Some rows have errors. Hover red rows for details.' : 'All rows valid. Ready to upload.', hasErrors);
+        };
+        reader.readAsText(file);
+    }
+
     function showValidationMessage(message, isError = false) {
-        validationMessage.textContent = message;
+        validationMessage.innerHTML = `<p class="mb-1">${message}</p>`;
         validationMessage.className = isError ? 'text-center error-message' : 'text-center success-message';
         validationMessage.classList.remove('d-none');
     }
 
-    // Hide validation message
     function hideValidationMessage() {
         validationMessage.classList.add('d-none');
     }
 
-    // Format file size
-    function formatFileSize(bytes) {
-        if (bytes === 0) return '0 Bytes';
-        const k = 1024;
-        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-    }
-
-    // Handle file selection
-    function handleFileSelection(file) {
-        const validation = validateFile(file);
-
-        if (validation.valid) {
-            fileName.textContent = `${file.name} (${formatFileSize(file.size)})`;
-            fileInfo.classList.remove('d-none');
-            showValidationMessage(validation.message, false);
-            uploadButton.disabled = false;
-        } else {
-            fileInfo.classList.add('d-none');
-            showValidationMessage(validation.message, true);
-            uploadButton.disabled = true;
-            fileInput.value = ''; // Clear the input
-        }
-    }
-
-    // File selection handling
     fileInput.addEventListener('change', function(e) {
         const file = e.target.files[0];
         if (file) {
-            handleFileSelection(file);
+            previewCSV(file);
         } else {
             hideValidationMessage();
-            uploadButton.disabled = false;
+            csvPreview.classList.add('d-none');
+            uploadButton.disabled = true;
         }
     });
 
-    // Drag and drop functionality
     uploadArea.addEventListener('dragover', function(e) {
         e.preventDefault();
         uploadArea.classList.add('dragover');
@@ -137,66 +190,78 @@
     uploadArea.addEventListener('drop', function(e) {
         e.preventDefault();
         uploadArea.classList.remove('dragover');
-
         const files = e.dataTransfer.files;
         if (files.length > 0) {
-            const file = files[0];
-            const dataTransfer = new DataTransfer();
-            dataTransfer.items.add(file);
-            fileInput.files = dataTransfer.files;
-            handleFileSelection(file);
+            fileInput.files = files;
+            previewCSV(files[0]);
         }
     });
 
-    // Form submission
     document.getElementById('uploadForm').addEventListener('submit', function(e) {
         e.preventDefault();
-
         const file = fileInput.files[0];
         if (!file) {
             showValidationMessage('Please select a CSV file to upload.', true);
             return;
         }
-
         const validation = validateFile(file);
         if (!validation.valid) {
             showValidationMessage(validation.message, true);
             return;
         }
-
-        // Show loading state
         uploadButton.disabled = true;
         uploadButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Uploading...';
-
-        // Create FormData object
         const formData = new FormData(this);
-
-        // Submit form via AJAX
         fetch('./handlers/add_students_handler.php', {
                 method: 'POST',
                 body: formData
             })
             .then(response => response.json())
             .then(data => {
-                if (data.success) {
-                    let message = data.message;
-                    if (data.data && data.data.inserted_rows !== undefined) {
-                        message += ` (${data.data.inserted_rows} records inserted)`;
+                let message = Array.isArray(data.message) ? data.message.join('<br>') : data.message;
+                showValidationMessage(message, !data.success);
+
+                // Display backend response data in a table (successful first, errors after)
+                if (Array.isArray(data.data) && data.data.length) {
+                    let table = `<table class="table table-bordered mt-3"><thead><tr>`;
+                    // Use expectedColumns for header
+                    expectedColumns.forEach(h => table += `<th>${h}</th>`);
+                    table += `</tr></thead><tbody>`;
+
+                    // Helper to render rows
+                    function renderRows(rows, rowClass = '') {
+                        rows.forEach(row => {
+                            table += `<tr${rowClass ? ` class="${rowClass}"` : ''}>`;
+                            expectedColumns.forEach(col => table += `<td>${row[col] ?? ''}</td>`);
+                            table += `</tr>`;
+                        });
                     }
-                    showValidationMessage(message, false);
-                    // Reset form on success
+
+                    // Show success entries first
+                    data.data.forEach(group => {
+                        if (group.type === 'createdEnrollments' || group.type === 'insertedStudents') {
+                            renderRows(group.rows, 'table-success');
+                        }
+                    });
+
+                    // Then show errors (existing, skipped, other errors) in red
+                    data.data.forEach(group => {
+                        if (group.type === 'existingEnrollments' || group.type === 'skippedRows' || group.type === 'otherErrors') {
+                            renderRows(group.rows, 'table-danger');
+                        }
+                    });
+
+                    table += `</tbody></table>`;
+                    csvPreview.innerHTML = table;
+                    csvPreview.classList.remove('d-none');
+                } else {
+                    csvPreview.classList.add('d-none');
+                }
+
+                if (data.success) {
                     this.reset();
                     fileInfo.classList.add('d-none');
                     setTimeout(() => hideValidationMessage(), 5000);
-                } else {
-                    let message = data.message;
-                    if (data.data && data.data.error_count) {
-                        message += ` (${data.data.error_count} errors found)`;
-                    }
-                    showValidationMessage(message, true);
-                    if (data.data && data.data.errors) {
-                        console.error('Validation errors:', data.data.errors);
-                    }
                 }
             })
             .catch(error => {
@@ -204,9 +269,44 @@
                 showValidationMessage('Upload failed. Please try again.', true);
             })
             .finally(() => {
-                // Reset button state
                 uploadButton.disabled = false;
                 uploadButton.innerHTML = '<i class="fas fa-upload me-2"></i>Upload';
             });
     });
+
+    // CSS for tooltip
+    const style = document.createElement('style');
+    style.innerHTML = `
+    .csv-error-tooltip {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        pointer-events: none;
+        transition: opacity 0.2s;
+    }
+    .csv-tooltip-active {
+        opacity: 1 !important;
+    }
+    `;
+    document.head.appendChild(style);
 </script>
+<?php
+$enrollmentErrors = [];
+// Inside your enrollment check:
+if (isset($enrollExists) && $enrollExists) {
+    if (isset($csvRollno)) {
+        $enrollmentErrors[] = $csvRollno;
+    } else {
+        error_log("Warning: \$csvRollno is not defined.");
+    }
+}
+if (!empty($enrollmentErrors)) {
+    $response['message'][] = "Enrollment already exists for: " . implode(', ', $enrollmentErrors);
+} else {
+    $response['message'][] = "No enrollment conflicts detected.";
+}
+// After processing all rows:
+if (!empty($enrollmentErrors)) {
+    $response['message'][] = "Enrollment already exists for: " . implode(',', $enrollmentErrors);
+}
+
+
+?>

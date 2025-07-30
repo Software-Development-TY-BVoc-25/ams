@@ -34,16 +34,24 @@ $pageCssFile = 'assets/css/' . ($page ? $page : 'dashboard') . '.css';
         <aside class="col-md-2 d-flex flex-column p-0 bg-light border-end">
             <?php include "./inc/sidebar.php"; ?>
         </aside>
-        <main class="col-md-10 px-4 d-flex flex-column">
+        <main class="col-md-10 px-4 d-flex flex-column-reverse">
             <div class="flex-grow-1">
                 <?php
-                include 'inc/filters.php';
-                include $pageFile; ?>
+                include $pageFile;
+                ?>
             </div>
-            <div class="alert alert-info mb-4" role="alert">
+            <div class="full-width">
+                <?php
+                if (!isset($hide_filters) || $hide_filters !== true) {
+                    include 'inc/filters.php';
+                }
+                ?>
+            </div>
+
+            <!-- <div class="alert alert-info mb-4" role="alert">
                 <strong>Selected Year:</strong> <?php echo $_COOKIE['year'] ?? "Not selected"; ?><br>
                 <strong>Selected Semester:</strong> <?php echo $_COOKIE['semester'] ?? "Not selected"; ?>
-            </div>
+            </div> -->
         </main>
 
     </div>
