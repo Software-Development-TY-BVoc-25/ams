@@ -3,156 +3,230 @@
 include "../config.php";
 header('Content-Type: application/json');
 
-// Initialize response
 $response = [
     'success' => false,
-    'message' => '',
-    'data' => []
+    'message' => [],
+    'data' => [
+        'createdEnrollments' => [],
+        'existingEnrollments' => [],
+        'insertedStudents' => [],
+        'skippedRows' => [],
+        'otherErrors' => []
+    ]
 ];
 
-$uploadDir = dirname(__DIR__) . '/uploads/';
-
-// this function validates the uploaded CSV file to check for required headers and data types
-function validateFile($filePath) {
-    $expectedHeaders = ['Student_ID', 'Student_Name', 'Student_Rollno', 'Class_ID', 'Department_ID', 'Subject_ID'];
-    $errors = [];
-    $rowCount = 0;
-    $validRows = 0;
-
-    if (!file_exists($filePath)) {
-        return ['errors' => ['File not found'], 'validRows' => 0, 'rowCount' => 0];
-    }
-
-    $handle = fopen($filePath, 'r');
-    if (!$handle) {
-        return ['errors' => ['Unable to open file'], 'validRows' => 0, 'rowCount' => 0];
-    }
-
-    $headers = fgetcsv($handle);
-    if (!$headers) {
-        fclose($handle);
-        return ['errors' => ['Unable to read headers'], 'validRows' => 0, 'rowCount' => 0];
-    }
-
-    // Check for missing headers
-    $missing = array_diff($expectedHeaders, $headers);
-    if (!empty($missing)) {
-        fclose($handle);
-        return ['errors' => ['Missing columns: ' . implode(', ', $missing)], 'validRows' => 0, 'rowCount' => 0];
-    }
-
-    // Map header positions
-    $headerMap = array_flip($headers);
-
-    // Validate each row
-    while (($row = fgetcsv($handle)) !== false) {
-        $rowCount++;
-        if (empty(array_filter($row))) continue; // skip empty rows
-        $rowErrors = [];
-        // Check required fields
-        foreach ($expectedHeaders as $header) {
-            $idx = $headerMap[$header];
-            if (!isset($row[$idx]) || trim($row[$idx]) === '') {
-                $rowErrors[] = "$header missing";
-            }
+function ensureStudentExists($name, $rollno, $conn) {
+    try {
+        $query = "SELECT * FROM student WHERE Student_Rollno = ?";
+        $stmt = $conn->prepare($query);
+        if (!$stmt) {
+            error_log("Prepare failed: " . $conn->error);
+            return ['exists' => false, 'name' => $name];
         }
-        // Check numeric fields
-        foreach (['Student_ID', 'Student_Rollno', 'Class_ID', 'Department_ID', 'Subject_ID'] as $header) {
-            $idx = $headerMap[$header];
-            if (isset($row[$idx]) && trim($row[$idx]) !== '' && !is_numeric($row[$idx])) {
-                $rowErrors[] = "$header must be numeric";
-            }
-        }
-        if (!empty($rowErrors)) {
-            $errors[] = "Row $rowCount: " . implode(', ', $rowErrors);
+        $stmt->bind_param("i", $rollno);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        if ($result && $result->num_rows > 0) {
+            $row = $result->fetch_assoc();
+            return ['exists' => true, 'name' => $row['Student_Name']];
         } else {
-            $validRows++;
-        }
-    }
-    fclose($handle);
-    return ['errors' => $errors, 'validRows' => $validRows, 'rowCount' => $rowCount];
-}
-
-//prepare the SQL statement
-$stmt = $conn->prepare(
-    "INSERT INTO student (Student_ID, Student_Name, Student_Rollno, Class_ID, Department_ID, Subject_ID)
-     VALUES (?, ?, ?, ?, ?, ?)
-     ON DUPLICATE KEY UPDATE
-        Student_Name = VALUES(Student_Name),
-        Student_Rollno = VALUES(Student_Rollno),
-        Class_ID = VALUES(Class_ID),
-        Department_ID = VALUES(Department_ID),
-        Subject_ID = VALUES(Subject_ID)"
-);
-
-
-
-//get the file from post
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (isset($_FILES['csvFile'])) {
-        $file = $_FILES['csvFile'];
-
-        //if uploads dir is present else create it
-        if (!is_dir($uploadDir)) {
-            mkdir($uploadDir, 0755, true);
-        }
-
-        //move the uploaded file to the uploads directory
-        $filePath = $uploadDir . basename($file['name']);
-        if (move_uploaded_file($file['tmp_name'], $filePath)) {
-            // Validate the file
-            $validation = validateFile($filePath);
-            if (!empty($validation['errors'])) {
-                $response['message'] = 'File validation failed: ' . implode('; ', $validation['errors']);
-            } else {
-
-                // Open the file again for inserting
-                $handle = fopen($filePath, 'r');
-                $headers = fgetcsv($handle); // skip header row
-                $insertedRows = 0;
-                $rowCount = 0;
-
-                while (($row = fgetcsv($handle)) !== false) {
-                    $rowCount++;
-                    if (empty(array_filter($row))) continue; // skip empty rows
-
-                    // Map header positions
-                    $headerMap = array_flip($headers);
-                    $rowData = [];
-                    foreach (['Student_ID', 'Student_Name', 'Student_Rollno', 'Class_ID', 'Department_ID', 'Subject_ID'] as $header) {
-                        $rowData[] = $row[$headerMap[$header]];
-                    }
-
-                    // Bind and execute
-                    $stmt->bind_param(
-                        "isiiii",
-                        $rowData[0], // Student_ID
-                        $rowData[1], // Student_Name
-                        $rowData[2], // Student_Rollno
-                        $rowData[3], // Class_ID
-                        $rowData[4], // Department_ID
-                        $rowData[5]  // Subject_ID
-                    );
-                    if ($stmt->execute()) {
-                        $insertedRows++;
-                    }
-                }
-                fclose($handle);
-
-                $response['success'] = true;
-                $response['message'] = "Upload successful. $insertedRows students added/updated.";
-                $response['data'] = [
-                    'inserted_rows' => $insertedRows,
-                    'total_rows' => $rowCount
-                ];
+            $insertQuery = "INSERT INTO student (Student_Rollno, Student_Name) VALUES (?, ?)";
+            $insertStmt = $conn->prepare($insertQuery);
+            if (!$insertStmt) {
+                error_log("Prepare failed: " . $conn->error);
+                return ['exists' => false, 'name' => $name];
             }
-        } else {
-            $response['message'] = 'Failed to move uploaded file';
+            $insertStmt->bind_param("is", $rollno, $name);
+            $insertStmt->execute();
+            return ensureStudentExists($name, $rollno, $conn);
         }
-    } else {
-        $response['message'] = 'No file uploaded';
+    } catch (Exception $e) {
+        error_log("Error checking/inserting student: " . $e->getMessage());
+        return ['exists' => false, 'name' => $name];
     }
 }
 
+function db_query($conn, $sql, $types = "", $params = []) {
+    $stmt = $conn->prepare($sql);
+    if (!$stmt) {
+        error_log("Prepare failed: " . $conn->error);
+        return false;
+    }
+    if ($types && $params) {
+        $stmt->bind_param($types, ...$params);
+    }
+    $stmt->execute();
+    return $stmt;
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csvFile'])) {
+
+    $file = $_FILES['csvFile'];
+    $open = fopen($file['tmp_name'], "r");
+    if (!$open) {
+        $response['message'][] = "Failed to open uploaded file.";
+        echo json_encode($response);
+        exit;
+    }
+    $headers = fgetcsv($open, 1000, ",");
+    if (!$headers || !is_array($headers)) {
+        $response['message'][] = "CSV header missing or invalid.";
+        fclose($open);
+        echo json_encode($response);
+        exit;
+    }
+
+    $createdEnrollments = [];
+    $existingEnrollments = [];
+    $insertedStudents = [];
+    $skippedRows = [];
+    $otherErrors = [];
+    $seenRollnos = [];
+
+    while (($tmp = fgetcsv($open, 1000, ",")) !== FALSE) {
+        // Skip empty rows
+        if (count(array_filter($tmp)) === 0) continue;
+        if (count($tmp) !== count($headers)) {
+            $skippedRows[] = [
+                'error' => 'Row skipped due to header mismatch',
+                'row' => $tmp
+            ];
+            continue;
+        }
+        $row = array_combine($headers, $tmp);
+
+        $csvName = $row['Student_Name'] ?? '';
+        $csvRollno = $row['Student_Rollno'] ?? '';
+        $csvDepartment = $row['Department_Name'] ?? '';
+        $csvYear = $row['Year_Level'] ?? '';
+        $csvDivision = $row['Division'] ?? '';
+        $csvSemester = $row['Semester'] ?? '';
+        $csvAcademicYear = $row['Academic_Year'] ?? '';
+
+        if (!$csvName || !$csvRollno || !$csvDepartment || !$csvYear || !$csvSemester || !$csvAcademicYear) {
+            $skippedRows[] = [
+                'error' => 'Row skipped due to missing required data',
+                'row' => $tmp
+            ];
+            continue;
+        }
+
+        $result = ensureStudentExists($csvName, (int)$csvRollno, $conn);
+
+        // Get Department_ID
+        $deptStmt = db_query($conn, "SELECT Department_ID FROM department WHERE Department_Name = ?", "s", [$csvDepartment]);
+        $deptRow = $deptStmt ? $deptStmt->get_result()->fetch_assoc() : null;
+        if (!$deptRow) {
+            $otherErrors[] = "Department not found: $csvDepartment";
+            continue;
+        }
+        $departmentId = $deptRow['Department_ID'];
+
+        // Get Class_ID
+        if (empty($csvDivision)) {
+            $classStmt = db_query($conn, "SELECT Class_ID FROM class WHERE Year_Level = ? AND Division IS NULL AND Department_ID = ?", "si", [$csvYear, $departmentId]);
+        } else {
+            $classStmt = db_query($conn, "SELECT Class_ID FROM class WHERE Year_Level = ? AND Division = ? AND Department_ID = ?", "ssi", [$csvYear, $csvDivision, $departmentId]);
+        }
+        $classRow = $classStmt ? $classStmt->get_result()->fetch_assoc() : null;
+        if (!$classRow) {
+            $otherErrors[] = "Class not found for: $csvYear, $csvDivision, $csvDepartment";
+            continue;
+        }
+        $classId = $classRow['Class_ID'];
+
+        // Check if enrollment already exists
+        $enrollCheckStmt = db_query(
+            $conn,
+            "SELECT Enrollment_ID FROM student_enrollment WHERE Student_Rollno = ? AND Class_ID = ? AND Semester = ? AND Year_Label = ?",
+            "iiis",
+            [(int)$csvRollno, $classId, $csvSemester, $csvAcademicYear]
+        );
+        $enrollExists = $enrollCheckStmt && $enrollCheckStmt->get_result()->num_rows > 0;
+
+        $rowData = [
+            'Student_Rollno' => $csvRollno,
+            'Student_Name' => $csvName,
+            'Department_Name' => $csvDepartment,
+            'Year_Level' => $csvYear,
+            'Division' => $csvDivision,
+            'Semester' => $csvSemester,
+            'Academic_Year' => $csvAcademicYear
+        ];
+
+        if (!$enrollExists) {
+            $enrollInsertStmt = db_query(
+                $conn,
+                "INSERT INTO student_enrollment (Student_Rollno, Class_ID, Semester, Year_Label) VALUES (?, ?, ?, ?)",
+                "iiis",
+                [(int)$csvRollno, $classId, $csvSemester, $csvAcademicYear]
+            );
+            $createdEnrollments[] = $rowData;
+        } else {
+            $existingEnrollments[] = $rowData;
+        }
+
+        if (!$result['exists']) {
+            $insertedStudents[] = $rowData;
+        }
+    }
+    fclose($open);
+
+    // Grouped messages and corresponding data
+    $response['message'] = [];
+    $response['data'] = [];
+
+    if (!empty($createdEnrollments)) {
+        $response['message'][] = "Enrollment created for: " . count($createdEnrollments);
+        $response['data'][] = [
+            'type' => 'createdEnrollments',
+            'rows' => $createdEnrollments
+        ];
+    }
+    if (!empty($existingEnrollments)) {
+        $response['message'][] = "Enrollment already exists for: " . count($existingEnrollments);
+        $response['data'][] = [
+            'type' => 'existingEnrollments',
+            'rows' => $existingEnrollments
+        ];
+    }
+    if (!empty($insertedStudents)) {
+        $response['message'][] = "Inserted students: " . count($insertedStudents);
+        $response['data'][] = [
+            'type' => 'insertedStudents',
+            'rows' => $insertedStudents
+        ];
+    }
+    if (!empty($skippedRows)) {
+        foreach ($skippedRows as $skip) {
+            $response['message'][] = $skip['error'];
+            $response['data'][] = [
+                'type' => 'skippedRows',
+                'rows' => [$skip['row']]
+            ];
+        }
+    }
+    if (!empty($otherErrors)) {
+        $response['message'][] = "Other errors: " . count($otherErrors);
+        $response['data'][] = [
+            'type' => 'otherErrors',
+            'rows' => $otherErrors
+        ];
+    }
+    if (empty($response['message'])) {
+        $response['message'][] = "No changes made.";
+        $response['data'][] = [
+            'type' => 'none',
+            'rows' => []
+        ];
+    }
+
+    $response['success'] = true;
+    $response['file'] = $file['name'];
+    $response['uploaded'] = true;
+} else {
+    $response['message'][] = 'No file received or invalid request method.';
+}
 
 echo json_encode($response);
