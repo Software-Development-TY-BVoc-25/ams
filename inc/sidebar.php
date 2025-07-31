@@ -4,18 +4,24 @@ $sidebar_pages = [
     [
         'url' => '',
         'label' => 'Dashboard',
-        'icon' => 'bi-speedometer2'
+        'icon' => 'fa-tachometer'
     ],
     [
-        'url' => 'add_students',
-        'label' => 'Add Students Data',
-        'icon' => 'bi-upload'
+        'url' => 'mark_attendance',
+        'label' => 'Mark Attendance',
+        'icon' => 'fa-th-list'
     ],
     [
         'url' => 'view_attendance',
         'label' => 'View Attendance',
-        'icon' => 'bi-list-check'
-    ]
+        'icon' => 'fa-th-list'
+    ],
+    [
+        'url' => 'add_students',
+        'label' => 'Add Students Data',
+        'icon' => 'fa-upload'
+    ],
+
 ];
 
 // Get current page from URL for active link highlighting
@@ -32,7 +38,7 @@ $current_page = trim($current_page, '/');
                 <a class="nav-link text-dark fw-semibold rounded px-3 py-2
                 <?php echo $is_active ? 'active' : 'hover-bg-primary'; ?>"
                     href="./<?php echo $page['url']; ?>">
-                    <i class="bi <?php echo $page['icon']; ?> me-2"></i> <?php echo $page['label']; ?>
+                    <i class="fa <?php echo $page['icon']; ?> me-2"></i> <?php echo $page['label']; ?>
                 </a>
             </li>
         <?php endforeach;
