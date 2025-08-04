@@ -23,9 +23,9 @@ INSERT INTO class (Year_Level, Course_Code, Division, Department_ID) VALUES
 ('SY', 'BCA', 'B', 1),
 ('TY', 'BCA', 'A', 1),
 ('TY', 'BCA', 'B', 1),
-('FY', 'BVOC', NULL, 2),
-('SY', 'BVOC', NULL, 2),
-('TY', 'BVOC', NULL, 2);
+('FY', 'BVOC', '', 2),
+('SY', 'BVOC', '', 2),
+('TY', 'BVOC', '', 2);
 
 -- 4. student
 -- Skipped: No insert data found for students.

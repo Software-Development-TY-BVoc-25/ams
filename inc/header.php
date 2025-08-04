@@ -13,7 +13,7 @@
                          Jhon Doe</span>
                      <span class="text-secondary lh-1" style="font-size: 0.7rem;">Admin</span>
                  </div>
-                 <i class="fas fa-chevron-down text-secondary ps-3" style="font-size: 0.7rem;"></i>
+                 <i class="fa fa-chevron-down text-secondary ps-3" style="font-size: 0.7rem;"></i>
              </a>
              <ul class="dropdown-menu dropdown-menu-end text-small" aria-labelledby="settingsDropdown">
                  <li><a class="dropdown-item" href="#">Profile</a></li>

@@ -22,7 +22,7 @@ A comprehensive web-based application built with PHP and MySQL to manage student
 -   **Role-based Access Control**: Admin, Teacher, and Student dashboards
 -   **Attendance Management**: Upload, track, and view attendance records
 -   **Student Management**: Comprehensive student information system
--   **Course Management**: Subject allocation and department organization
+-   **Course Management**: Subject allocation and course organization
 -   **Responsive Design**: Bootstrap-powered responsive UI
 -   **Secure Authentication**: Session-based user authentication
 -   **Database Integration**: MySQL with proper relational structure

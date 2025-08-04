@@ -98,13 +98,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csvFile'])) {
 
         $csvName = $row['Student_Name'] ?? '';
         $csvRollno = $row['Student_Rollno'] ?? '';
-        $csvDepartment = $row['Department_Name'] ?? '';
+        $csvCourseCode = $row['Course_Code'] ?? '';
         $csvYear = $row['Year_Level'] ?? '';
         $csvDivision = $row['Division'] ?? '';
         $csvSemester = $row['Semester'] ?? '';
         $csvAcademicYear = $row['Academic_Year'] ?? '';
 
-        if (!$csvName || !$csvRollno || !$csvDepartment || !$csvYear || !$csvSemester || !$csvAcademicYear) {
+        if (!$csvName || !$csvRollno || !$csvCourseCode || !$csvYear || !$csvSemester || !$csvAcademicYear) {
             $skippedRows[] = [
                 'error' => 'Row skipped due to missing required data',
                 'row' => $tmp
@@ -114,24 +114,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csvFile'])) {
 
         $result = ensureStudentExists($csvName, (int)$csvRollno, $conn);
 
-        // Get Department_ID
-        $deptStmt = db_query($conn, "SELECT Department_ID FROM department WHERE Department_Name = ?", "s", [$csvDepartment]);
-        $deptRow = $deptStmt ? $deptStmt->get_result()->fetch_assoc() : null;
-        if (!$deptRow) {
-            $otherErrors[] = "Department not found: $csvDepartment";
-            continue;
-        }
-        $departmentId = $deptRow['Department_ID'];
-
-        // Get Class_ID
-        if (empty($csvDivision)) {
-            $classStmt = db_query($conn, "SELECT Class_ID FROM class WHERE Year_Level = ? AND Division IS NULL AND Department_ID = ?", "si", [$csvYear, $departmentId]);
+        // Only use class table for Course_Code lookup
+        if ($csvDivision === '' || $csvDivision === null) {
+            $classStmt = db_query($conn, "SELECT Class_ID FROM class WHERE Year_Level = ? AND (Division = '' OR Division IS NULL) AND Course_Code = ?", "ss", [$csvYear, $csvCourseCode]);
         } else {
-            $classStmt = db_query($conn, "SELECT Class_ID FROM class WHERE Year_Level = ? AND Division = ? AND Department_ID = ?", "ssi", [$csvYear, $csvDivision, $departmentId]);
+            $classStmt = db_query($conn, "SELECT Class_ID FROM class WHERE Year_Level = ? AND Division = ? AND Course_Code = ?", "sss", [$csvYear, $csvDivision, $csvCourseCode]);
         }
         $classRow = $classStmt ? $classStmt->get_result()->fetch_assoc() : null;
         if (!$classRow) {
-            $otherErrors[] = "Class not found for: $csvYear, $csvDivision, $csvDepartment";
+            $otherErrors[] = [
+                'error' => "Class not found for: $csvYear, $csvDivision, $csvCourseCode",
+                'row' => $row
+            ];
             continue;
         }
         $classId = $classRow['Class_ID'];
@@ -148,7 +142,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csvFile'])) {
         $rowData = [
             'Student_Rollno' => $csvRollno,
             'Student_Name' => $csvName,
-            'Department_Name' => $csvDepartment,
+            'Course_Code' => $csvCourseCode,
             'Year_Level' => $csvYear,
             'Division' => $csvDivision,
             'Semester' => $csvSemester,
@@ -208,11 +202,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csvFile'])) {
         }
     }
     if (!empty($otherErrors)) {
-        $response['message'][] = "Other errors: " . count($otherErrors);
-        $response['data'][] = [
-            'type' => 'otherErrors',
-            'rows' => $otherErrors
-        ];
+        foreach ($otherErrors as $err) {
+            $response['message'][] = $err['error'];
+            $response['data'][] = [
+                'type' => 'otherErrors',
+                'rows' => [$err['row']]
+            ];
+        }
     }
     if (empty($response['message'])) {
         $response['message'][] = "No changes made.";

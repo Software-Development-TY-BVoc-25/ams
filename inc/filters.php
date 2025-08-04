@@ -1,87 +1,188 @@
 <?php
-// Handle form submission and set cookies
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (!empty($_POST['year'])) {
-        setcookie('year', $_POST['year'], time() + (86400 * 30), "/"); // Set cookie for 30 days
+// filepath: c:\xampp\htdocs\ams\inc\filters.php
+require_once __DIR__ . '/../config.php';
+
+// Get selected values from cookies
+$selectedYear       = $_COOKIE['year'] ?? '';
+$selectedLevel      = $_COOKIE['level'] ?? '';
+$selectedCourse     = $_COOKIE['course'] ?? '';
+$selectedDivision   = $_COOKIE['division'] ?? '';
+$selectedSemester   = $_COOKIE['semester'] ?? '';
+$selectedSubject    = $_COOKIE['subject'] ?? '';
+
+// Academic Years
+$academicYears = [];
+$res = $conn->query("SELECT Year_Label FROM academic_year ORDER BY Year_Label DESC");
+while ($row = $res->fetch_assoc()) {
+    $academicYears[] = $row['Year_Label'];
+}
+
+// Levels (static options)
+$levels = ['FY', 'SY', 'TY'];
+
+// Courses (all distinct Course_Code from class)
+$courses = [];
+$res = $conn->query("SELECT DISTINCT Course_Code FROM class ORDER BY Course_Code");
+while ($row = $res->fetch_assoc()) {
+    $courses[] = $row['Course_Code'];
+}
+// If selectedCourse is not valid, reset it and dependent fields
+if ($selectedCourse && !in_array($selectedCourse, $courses)) {
+    $selectedCourse = '';
+    $selectedDivision = '';
+    $selectedSubject = '';
+}
+
+// Divisions (filtered by course)
+$divisions = [];
+if ($selectedCourse) {
+    $stmt = $conn->prepare("SELECT DISTINCT Division FROM class WHERE Course_Code = ?");
+    $stmt->bind_param("s", $selectedCourse);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    while ($row = $result->fetch_assoc()) {
+        // Convert NULL to empty string for consistency
+        $divisions[] = ($row['Division'] === null) ? '' : $row['Division'];
     }
-    if (!empty($_POST['semester'])) {
-        setcookie('semester', $_POST['semester'], time() + (86400 * 30), "/"); // Set cookie for 30 days
+    // If selectedDivision is not valid, reset it
+    if ($selectedDivision && !in_array($selectedDivision, $divisions)) {
+        $selectedDivision = '';
     }
-    if (!empty($_POST['class'])) {
-        setcookie('class', $_POST['class'], time() + (86400 * 30), "/"); // Set cookie for 30 days
+}
+
+// Semesters (all)
+$semesters = [];
+$res = $conn->query("SELECT DISTINCT Semester FROM subject ORDER BY Semester");
+while ($row = $res->fetch_assoc()) {
+    $semesters[] = $row['Semester'];
+}
+
+// Subjects (filtered by course and semester)
+$subjects = [];
+if ($selectedCourse && $selectedSemester) {
+    // Find Department_ID for the selected course
+    $stmt = $conn->prepare("SELECT Department_ID FROM class WHERE Course_Code = ? LIMIT 1");
+    $stmt->bind_param("s", $selectedCourse);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $deptRow = $result->fetch_assoc();
+    $departmentId = $deptRow ? $deptRow['Department_ID'] : null;
+
+    if ($departmentId) {
+        $stmt = $conn->prepare("SELECT Subject_Name FROM subject WHERE Department_ID = ? AND Semester = ?");
+        $stmt->bind_param("ii", $departmentId, $selectedSemester);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        while ($row = $result->fetch_assoc()) {
+            $subjects[] = $row['Subject_Name'];
+        }
+        // If selectedSubject is not valid, reset it
+        if ($selectedSubject && !in_array($selectedSubject, $subjects)) {
+            $selectedSubject = '';
+        }
     }
-    if (!empty($_POST['subject'])) {
-        setcookie('subject', $_POST['subject'], time() + (86400 * 30), "/"); // Set cookie for 30 days
-    }
-    // Refresh the page to apply changes
-    header("Location: " . $_SERVER['REQUEST_URI']);
-    exit;
 }
 ?>
-
-
-<div class="d-flex align-items-center ms-auto py-3 mt-2">
-    <form method="post" class="d-flex align-items-center gap-3">
-        <!-- Year Selection -->
-        <div class="input-group" style="width: 200px;">
+<form method="post" class="row g-3 align-items-center py-3 mt-2 w-100">
+    <!-- Year -->
+    <div class="col-12 col-sm-6 col-md-4 col-lg-2 mb-2">
+        <div class="input-group">
             <label class="input-group-text small bg-light text-secondary" for="yearSelect" style="font-size: 0.8rem;">Year</label>
-            <select id="yearSelect" name="year" class="form-select form-select-sm" onchange="this.form.submit()" style="font-size: 0.8rem;">
-                <option value="" disabled selected>Select</option>
-                <?php
-                $years = [2025, 2024, 2023, 2022]; // Example data
-                foreach ($years as $year) {
-                    $selected = (isset($_COOKIE['year']) && $_COOKIE['year'] == $year) ? 'selected' : '';
-                    echo "<option value=\"$year\" $selected>$year</option>";
-                }
-                ?>
+            <select id="yearSelect" name="year" class="form-select form-select-sm" style="font-size: 0.8rem;" onchange="this.form.submit()">
+                <option value="" disabled <?php echo !$selectedYear ? 'selected' : ''; ?>>Select</option>
+                <?php foreach ($academicYears as $year): ?>
+                    <option value="<?php echo $year; ?>" <?php echo ($selectedYear == $year) ? 'selected' : ''; ?>>
+                        <?php echo $year; ?>
+                    </option>
+                <?php endforeach; ?>
             </select>
         </div>
-
-        <!-- Semester Selection -->
-        <div class="input-group" style="width: 200px;">
+    </div>
+    <!-- Level -->
+    <div class="col-12 col-sm-6 col-md-4 col-lg-2 mb-2">
+        <div class="input-group">
+            <label class="input-group-text small bg-light text-secondary" for="levelSelect" style="font-size: 0.8rem;">Level</label>
+            <select id="levelSelect" name="level" class="form-select form-select-sm" style="font-size: 0.8rem;" onchange="this.form.submit()">
+                <option value="" disabled <?php echo !$selectedLevel ? 'selected' : ''; ?>>Select</option>
+                <?php foreach ($levels as $level): ?>
+                    <option value="<?php echo $level; ?>" <?php echo ($selectedLevel == $level) ? 'selected' : ''; ?>>
+                        <?php echo $level; ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+    </div>
+    <!-- Course -->
+    <div class="col-12 col-sm-6 col-md-4 col-lg-2 mb-2">
+        <div class="input-group">
+            <label class="input-group-text small bg-light text-secondary" for="courseSelect" style="font-size: 0.8rem;">Course</label>
+            <select id="courseSelect" name="course" class="form-select form-select-sm" style="font-size: 0.8rem;" onchange="this.form.submit()">
+                <option value="" disabled <?php echo !$selectedCourse ? 'selected' : ''; ?>>Select</option>
+                <?php foreach ($courses as $course): ?>
+                    <option value="<?php echo $course; ?>" <?php echo ($selectedCourse == $course) ? 'selected' : ''; ?>>
+                        <?php echo $course; ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+    </div>
+    <!-- Division -->
+    <div class="col-12 col-sm-6 col-md-4 col-lg-2 mb-2">
+        <div class="input-group">
+            <label class="input-group-text small bg-light text-secondary" for="divisionSelect" style="font-size: 0.8rem;">Division</label>
+            <select id="divisionSelect" name="division" class="form-select form-select-sm" style="font-size: 0.8rem;" onchange="this.form.submit()" <?php if (!$selectedCourse) echo 'disabled'; ?>>
+                <option value="" <?php echo $selectedDivision === '' ? 'selected' : ''; ?>>None</option>
+                <?php foreach ($divisions as $division): ?>
+                    <?php if ($division !== ''): ?>
+                        <option value="<?php echo $division; ?>" <?php echo ($selectedDivision == $division) ? 'selected' : ''; ?>>
+                            <?php echo $division; ?>
+                        </option>
+                    <?php endif; ?>
+                <?php endforeach; ?>
+            </select>
+        </div>
+    </div>
+    <!-- Semester -->
+    <div class="col-12 col-sm-6 col-md-4 col-lg-2 mb-2">
+        <div class="input-group">
             <label class="input-group-text small bg-light text-secondary" for="semesterSelect" style="font-size: 0.8rem;">Semester</label>
-            <select id="semesterSelect" name="semester" class="form-select form-select-sm" onchange="this.form.submit()" style="font-size: 0.8rem;">
-                <option value="" disabled selected>Select Semester</option>
-                <?php
-                $semesters = [1, 2]; // Example data
-                foreach ($semesters as $semester) {
-                    $selected = (isset($_COOKIE['semester']) && $_COOKIE['semester'] == $semester) ? 'selected' : '';
-                    echo "<option value=\"$semester\" $selected>$semester</option>";
-                }
-                ?>
+            <select id="semesterSelect" name="semester" class="form-select form-select-sm" style="font-size: 0.8rem;" onchange="this.form.submit()">
+                <option value="" disabled <?php echo !$selectedSemester ? 'selected' : ''; ?>>Select</option>
+                <?php foreach ($semesters as $semester): ?>
+                    <option value="<?php echo $semester; ?>" <?php echo ($selectedSemester == $semester) ? 'selected' : ''; ?>>
+                        <?php echo $semester; ?>
+                    </option>
+                <?php endforeach; ?>
             </select>
         </div>
-
-        <!-- Class Selection -->
-        <div class="input-group" style="width: 200px;">
-            <label class="input-group-text small bg-light text-secondary" for="classSelect" style="font-size: 0.8rem;">Class</label>
-            <select id="classSelect" name="class" class="form-select form-select-sm" onchange="this.form.submit()" style="font-size: 0.8rem;">
-                <option value="" disabled selected>Select Class</option>
-                <?php
-                $classes = ['FY', 'SY', 'TY']; // Example data
-                foreach ($classes as $class) {
-                    $selected = (isset($_COOKIE['class']) && $_COOKIE['class'] == $class) ? 'selected' : '';
-                    echo "<option value=\"$class\" $selected>$class</option>";
-                }
-                ?>
-            </select>
-        </div>
-
-        <!-- Subject Selection -->
-        <div class="input-group" style="width: 200px;">
+    </div>
+    <!-- Subject -->
+    <div class="col-12 col-sm-6 col-md-4 col-lg-2 mb-2">
+        <div class="input-group">
             <label class="input-group-text small bg-light text-secondary" for="subjectSelect" style="font-size: 0.8rem;">Subject</label>
-            <select id="subjectSelect" name="subject" class="form-select form-select-sm" onchange="this.form.submit()" style="font-size: 0.8rem;">
-                <option value="" disabled selected>Select Subject</option>
-                <?php
-                $subjects = ['Mathematics', 'Physics', 'Chemistry', 'English']; // Example data
-                foreach ($subjects as $subject) {
-                    $selected = (isset($_COOKIE['subject']) && $_COOKIE['subject'] == $subject) ? 'selected' : '';
-                    echo "<option value=\"$subject\" $selected>$subject</option>";
-                }
-                ?>
+            <select id="subjectSelect" name="subject" class="form-select form-select-sm" style="font-size: 0.8rem;" onchange="this.form.submit()" <?php if (!$selectedCourse || !$selectedSemester) echo 'disabled'; ?>>
+                <option value="" disabled <?php echo !$selectedSubject ? 'selected' : ''; ?>>Select</option>
+                <?php foreach ($subjects as $subject): ?>
+                    <option value="<?php echo $subject; ?>" <?php echo ($selectedSubject == $subject) ? 'selected' : ''; ?>>
+                        <?php echo $subject; ?>
+                    </option>
+                <?php endforeach; ?>
             </select>
         </div>
-
-        <!-- Add more fields like section, etc. here as needed -->
-    </form>
+    </div>
+</form>
+</select>
 </div>
+</div>
+</form>
+</div>
+</div>
+<?php foreach ($levels as $level): ?>
+    <option value="<?php echo $level; ?>" <?php echo ($selectedLevel == $level) ? 'selected' : ''; ?>>
+        <?php echo $level; ?>
+    </option>
+<?php endforeach; ?>
+</select>
+</div>
+</div>
+</form>

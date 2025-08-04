@@ -7,6 +7,25 @@ $page = trim($url, '/');
 $pageFile = 'pages/' . ($page ? $page : 'dashboard') . '.php';
 $pageCssFile = 'assets/css/' . ($page ? $page : 'dashboard') . '.css';
 
+
+// Handle form submission and update cookies
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Track previous values to reset dependent fields
+    $prevCourse     = $_COOKIE['course'] ?? '';
+
+    // Set cookies for all fields, always use empty string for unset
+    foreach (['course', 'division', 'semester', 'subject', 'year', 'level'] as $field) {
+        $value = isset($_POST[$field]) ? $_POST[$field] : '';
+        setcookie($field, $value, time() + (86400 * 30), "/");
+        $_COOKIE[$field] = $value;
+    }
+
+    // Reset dependent fields if parent changed
+    if (isset($_POST['course']) && $_POST['course'] !== $prevCourse) {
+        setcookie('division', '', time() - 3600, "/");
+        $_COOKIE['division'] = '';
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -37,7 +56,11 @@ $pageCssFile = 'assets/css/' . ($page ? $page : 'dashboard') . '.css';
         <main class="col-md-10 px-4 d-flex flex-column-reverse">
             <div class="flex-grow-1">
                 <?php
-                include $pageFile;
+                if (file_exists($pageFile)) {
+                    include $pageFile;
+                } else {
+                    include 'pages/404.php';
+                }
                 ?>
             </div>
             <div class="full-width">
@@ -50,7 +73,13 @@ $pageCssFile = 'assets/css/' . ($page ? $page : 'dashboard') . '.css';
 
             <!-- <div class="alert alert-info mb-4" role="alert">
                 <strong>Selected Year:</strong> <?php echo $_COOKIE['year'] ?? "Not selected"; ?><br>
-                <strong>Selected Semester:</strong> <?php echo $_COOKIE['semester'] ?? "Not selected"; ?>
+                <strong>Selected Semester:</strong> <?php echo $_COOKIE['semester'] ?? "Not selected"; ?><br>
+                <strong>Selected Subject:</strong> <?php echo $_COOKIE['subject'] ?? "Not selected"; ?><br>
+                <strong>Selected Class:</strong> <?php echo $_COOKIE['class'] ?? "Not selected"; ?><br>
+                <strong>Selected Month:</strong> <?php echo date('F Y', strtotime($_COOKIE['month'] ?? 'now')); ?><br>
+                <strong>Selected Department:</strong> <?php echo $_COOKIE['department'] ?? "Not selected"; ?><br>
+                <strong>Selected Course:</strong> <?php echo $_COOKIE['course'] ?? "Not selected"; ?><br>
+                <strong>Selected Division:</strong> <?php echo $_COOKIE['division'] ?? "Not selected"; ?><br>
             </div> -->
         </main>
 
@@ -60,5 +89,7 @@ $pageCssFile = 'assets/css/' . ($page ? $page : 'dashboard') . '.css';
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js" integrity="sha384-ndDqU0Gzau9qJ1lfW4pNLlhNTkCfHzAVBReH9diLvGRem5+R9g2FzA8ZGN954O5Q" crossorigin="anonymous"></script>
 </body>
+
+</html>
 
 </html>

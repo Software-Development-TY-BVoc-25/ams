@@ -8,30 +8,30 @@ This document serves as a complete guide to the **Attendance Management System (
 
 The AMS is built to:
 
-- Track student attendance on a subject-wise, day-wise basis
-- Handle CSV imports from the admin at the start of each semester
-- Allow teachers to mark attendance per subject, per month
-- Maintain historical data semester-wise without overwriting old records
-- Accommodate real-world needs like shared teachers across departments, non-teaching roles, and students changing enrollment over time
+-   Track student attendance on a subject-wise, day-wise basis
+-   Handle CSV imports from the admin at the start of each semester
+-   Allow teachers to mark attendance per subject, per month
+-   Maintain historical data semester-wise without overwriting old records
+-   Accommodate real-world needs like shared teachers across departments, non-teaching roles, and students changing enrollment over time
 
 ---
 
 ## 🔁 Key System Assumptions
 
-- Admin uploads student data every semester, which includes semester number and academic year
-- Teachers belong to one or more departments and teach one or more subjects
-- A subject can exist across semesters and departments
-- Students may have duplicate names but are uniquely identified by a system-assigned ID
-- Attendance is marked monthly in an Excel-like format
-- All past attendance records must be retained
+-   Admin uploads student data every semester, which includes semester number and academic year
+-   Teachers belong to one or more departments and teach one or more subjects
+-   A subject can exist across semesters and departments
+-   Students may have duplicate names but are uniquely identified by a system-assigned ID
+-   Attendance is marked monthly in an Excel-like format
+-   All past attendance records must be retained
 
 ---
 
 ## 📐 Schema Overview and Design Decisions
 
-Each table below explains *why* it exists and *how* it connects to others.
+Each table below explains _why_ it exists and _how_ it connects to others.
 
-### 1. **academic\_year** – *Tracks sessional years like '2024–25'*
+### 1. **academic_year** – _Tracks sessional years like '2024–25'_
 
 ```sql
 CREATE TABLE academic_year (
@@ -39,12 +39,12 @@ CREATE TABLE academic_year (
 );
 ```
 
-- No auto ID – the label itself (e.g., `'2025-26'`) is more human-readable and query-friendly
-- Used in enrollment and subject allocations to distinguish across years
+-   No auto ID – the label itself (e.g., `'2025-26'`) is more human-readable and query-friendly
+-   Used in enrollment and subject allocations to distinguish across years
 
 ---
 
-### 2. **department** – *Academic divisions like BCA, BVOC*
+### 2. **department** – _Academic divisions like BCA, BVOC_
 
 ```sql
 CREATE TABLE department (
@@ -53,31 +53,31 @@ CREATE TABLE department (
 );
 ```
 
-- Unique names prevent duplicates
-- Connected to subjects, classes, and teacher mappings
+-   Unique names prevent duplicates
+-   Connected to subjects, classes, and teacher mappings
 
 ---
 
-### 3. **class** – *Represents a batch like FY BCA A*
+### 3. **class** – _Represents a batch like FY BCA A_
 
 ```sql
 CREATE TABLE class (
     Class_ID INT AUTO_INCREMENT PRIMARY KEY,
     Year_Level ENUM('FY', 'SY', 'TY') NOT NULL,
     Course_Code VARCHAR(50) NOT NULL,
-    Division VARCHAR(5),
+    Division VARCHAR(5) DEFAULT '', -- Use empty string for "no division"
     Department_ID INT NOT NULL,
     FOREIGN KEY (Department_ID) REFERENCES department(Department_ID)
 );
 ```
 
-- Kept separate from academic year intentionally
-- Classes like `FY BCA A` stay the same each year
-- Year-wise records are tracked via student enrollment instead
+-   Kept separate from academic year intentionally
+-   Classes like `FY BCA A` stay the same each year
+-   Year-wise records are tracked via student enrollment instead
 
 ---
 
-### 4. **student** – *Student personal details*
+### 4. **student** – _Student personal details_
 
 ```sql
 CREATE TABLE student (
@@ -87,12 +87,12 @@ CREATE TABLE student (
 );
 ```
 
-- Stores only static identity info
-- No semester/year here to avoid duplication and keep records atomic
+-   Stores only static identity info
+-   No semester/year here to avoid duplication and keep records atomic
 
 ---
 
-### 5. **student\_semester\_enrollment** – *Links students to class/semester/year*
+### 5. **student_semester_enrollment** – _Links students to class/semester/year_
 
 ```sql
 CREATE TABLE student_semester_enrollment (
@@ -107,12 +107,12 @@ CREATE TABLE student_semester_enrollment (
 );
 ```
 
-- Allows the same student to appear in different semesters and years
-- Central to admin uploads (CSV files are parsed into this table)
+-   Allows the same student to appear in different semesters and years
+-   Central to admin uploads (CSV files are parsed into this table)
 
 ---
 
-### 6. **subject** – *All subjects grouped by semester and department*
+### 6. **subject** – _All subjects grouped by semester and department_
 
 ```sql
 CREATE TABLE subject (
@@ -124,12 +124,12 @@ CREATE TABLE subject (
 );
 ```
 
-- Mapped directly to departments (e.g., ‘Web Dev’ in BCA)
-- Reused across academic years
+-   Mapped directly to departments (e.g., ‘Web Dev’ in BCA)
+-   Reused across academic years
 
 ---
 
-### 7. **teacher** – *Holds teacher details*
+### 7. **teacher** – _Holds teacher details_
 
 ```sql
 CREATE TABLE teacher (
@@ -140,12 +140,12 @@ CREATE TABLE teacher (
 );
 ```
 
-- Teachers can be reused across years and departments
-- Initials are helpful for UI abbreviation (e.g., ‘AMR’ for Arvind M. Rao)
+-   Teachers can be reused across years and departments
+-   Initials are helpful for UI abbreviation (e.g., ‘AMR’ for Arvind M. Rao)
 
 ---
 
-### 8. **teacher\_department** – *Many-to-many mapping between teachers and departments*
+### 8. **teacher_department** – _Many-to-many mapping between teachers and departments_
 
 ```sql
 CREATE TABLE teacher_department (
@@ -158,12 +158,12 @@ CREATE TABLE teacher_department (
 );
 ```
 
-- Ensures that teachers like a Math teacher can teach in both BCA and BVOC
-- Used during subject allocation
+-   Ensures that teachers like a Math teacher can teach in both BCA and BVOC
+-   Used during subject allocation
 
 ---
 
-### 9. **tr\_subject\_allocation** – *Tracks which teacher teaches which subject, to which class, in which semester and year*
+### 9. **tr_subject_allocation** – _Tracks which teacher teaches which subject, to which class, in which semester and year_
 
 ```sql
 CREATE TABLE tr_subject_allocation (
@@ -181,12 +181,12 @@ CREATE TABLE tr_subject_allocation (
 );
 ```
 
-- This is how the frontend knows which subject to show the teacher
-- One teacher can teach multiple subjects to multiple classes
+-   This is how the frontend knows which subject to show the teacher
+-   One teacher can teach multiple subjects to multiple classes
 
 ---
 
-### 10. **attendance** – *Stores P/A/L status by student/date/subject/class*
+### 10. **attendance** – _Stores P/A/L status by student/date/subject/class_
 
 ```sql
 CREATE TABLE attendance (
@@ -204,13 +204,13 @@ CREATE TABLE attendance (
 );
 ```
 
-- Matches the frontend’s sheet view (students vs dates)
-- `Class_ID` allows joins with subject allocation
-- `UNIQUE` constraint prevents duplicate marking
+-   Matches the frontend’s sheet view (students vs dates)
+-   `Class_ID` allows joins with subject allocation
+-   `UNIQUE` constraint prevents duplicate marking
 
 ---
 
-### 11. **user\_table** – *Holds login and access control*
+### 11. **user_table** – _Holds login and access control_
 
 ```sql
 CREATE TABLE user_table (
@@ -225,11 +225,10 @@ CREATE TABLE user_table (
 );
 ```
 
-- Required for all roles (admin, teacher, etc.)
-- A teacher must be here to log in, but admins/principals don’t need to exist in the `teacher` table
-- `Reference_ID` connects login accounts to teacher identity when needed
+-   Required for all roles (admin, teacher, etc.)
+-   A teacher must be here to log in, but admins/principals don’t need to exist in the `teacher` table
+-   `Reference_ID` connects login accounts to teacher identity when needed
 
 ---
 
 Let me know if you'd like this exported as a PDF, markdown file, or printed ER diagram.
-

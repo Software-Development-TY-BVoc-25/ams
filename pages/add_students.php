@@ -25,7 +25,7 @@ $hide_filters = true;
 
                 <div>
                     <button type="submit" class="btn btn-primary w-100" id="uploadButton" disabled>
-                        <i class="fas fa-upload me-2"></i>
+                        <i class="fa fa-upload me-2"></i>
                         Upload
                     </button>
                 </div>
@@ -45,7 +45,7 @@ $hide_filters = true;
     const uploadButton = document.getElementById('uploadButton');
     const csvPreview = document.getElementById('csvPreview');
     const expectedColumns = [
-        'Student_Name', 'Student_Rollno', 'Department_Name', 'Year_Level', 'Division', 'Semester', 'Academic_Year'
+        'Student_Name', 'Student_Rollno', 'Course_Code', 'Year_Level', 'Division', 'Semester', 'Academic_Year'
     ];
 
     function validateFile(file) {
@@ -81,7 +81,7 @@ $hide_filters = true;
         if (row.length !== expectedColumns.length) errors.push('Incorrect number of columns');
         if (!row[0]) errors.push('Student_Name missing');
         if (!/^\d+$/.test(row[1])) errors.push('Student_Rollno invalid');
-        if (!row[2]) errors.push('Department_Name missing');
+        if (!row[2]) errors.push('Course_Code missing');
         if (!['fy', 'sy', 'ty'].includes(row[3].toLowerCase())) errors.push('Year_Level invalid');
         if (row[4] && !/^[A-Za-z]$/.test(row[4])) errors.push('Division invalid');
         if (!/^\d+$/.test(row[5])) errors.push('Semester invalid');
@@ -221,14 +221,78 @@ $hide_filters = true;
                 let message = Array.isArray(data.message) ? data.message.join('<br>') : data.message;
                 showValidationMessage(message, !data.success);
 
-                // Display backend response data in a table (successful first, errors after)
                 if (Array.isArray(data.data) && data.data.length) {
                     let table = `<table class="table table-bordered mt-3"><thead><tr>`;
-                    // Use expectedColumns for header
                     expectedColumns.forEach(h => table += `<th>${h}</th>`);
                     table += `</tr></thead><tbody>`;
 
-                    // Helper to render rows
+                    // Collect error rows to render at the top
+                    let errorRows = [];
+
+                    // Helper to extract student name/rollno from row
+                    function getNameRoll(row) {
+                        if (!row) return {
+                            name: '',
+                            roll: ''
+                        };
+                        return {
+                            name: row.Student_Name || row[0] || '',
+                            roll: row.Student_Rollno || row[1] || ''
+                        };
+                    }
+
+                    // Collect skippedRows and otherErrors
+                    data.data.forEach(group => {
+                        if (group.type === 'skippedRows') {
+                            group.rows.forEach(row => {
+                                // Try to find error message for this row
+                                let idx = data.data.indexOf(group);
+                                let errorMsg = '';
+                                if (Array.isArray(data.message)) {
+                                    errorMsg = data.message[idx] || 'Skipped row';
+                                }
+                                let {
+                                    name,
+                                    roll
+                                } = getNameRoll(row);
+                                errorRows.push({
+                                    error: errorMsg,
+                                    name,
+                                    roll
+                                });
+                            });
+                        }
+                        if (group.type === 'otherErrors') {
+                            group.rows.forEach(row => {
+                                let idx = data.data.indexOf(group);
+                                let errorMsg = '';
+                                if (Array.isArray(data.message)) {
+                                    errorMsg = data.message[idx] || 'Other error';
+                                }
+                                let {
+                                    name,
+                                    roll
+                                } = getNameRoll(row);
+                                errorRows.push({
+                                    error: errorMsg,
+                                    name,
+                                    roll
+                                });
+                            });
+                        }
+                    });
+
+                    // Render error rows at the top
+                    errorRows.forEach(err => {
+                        table += `<tr class="table-warning">
+                            <td colspan="${expectedColumns.length}">
+                                <strong>Error:</strong> ${err.error}
+                                ${err.name || err.roll ? `<span class="ms-3 text-danger">[${err.name ? 'Name: ' + err.name : ''}${err.name && err.roll ? ', ' : ''}${err.roll ? 'Roll: ' + err.roll : ''}]</span>` : ''}
+                            </td>
+                        </tr>`;
+                    });
+
+                    // Helper to render normal rows
                     function renderRows(rows, rowClass = '') {
                         rows.forEach(row => {
                             table += `<tr${rowClass ? ` class="${rowClass}"` : ''}>`;
@@ -237,16 +301,12 @@ $hide_filters = true;
                         });
                     }
 
-                    // Show success entries first
+                    // Render non-error rows
                     data.data.forEach(group => {
                         if (group.type === 'createdEnrollments' || group.type === 'insertedStudents') {
                             renderRows(group.rows, 'table-success');
                         }
-                    });
-
-                    // Then show errors (existing, skipped, other errors) in red
-                    data.data.forEach(group => {
-                        if (group.type === 'existingEnrollments' || group.type === 'skippedRows' || group.type === 'otherErrors') {
+                        if (group.type === 'existingEnrollments') {
                             renderRows(group.rows, 'table-danger');
                         }
                     });

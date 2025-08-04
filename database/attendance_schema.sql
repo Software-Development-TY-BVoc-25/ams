@@ -20,7 +20,7 @@ CREATE TABLE class (
     Class_ID INT AUTO_INCREMENT PRIMARY KEY,
     Year_Level ENUM('FY', 'SY', 'TY') NOT NULL,
     Course_Code VARCHAR(20) NOT NULL,
-    Division VARCHAR(5),
+    Division VARCHAR(5) DEFAULT '', -- Use empty string as default
     Department_ID INT NOT NULL,
     FOREIGN KEY (Department_ID) REFERENCES department(Department_ID)
 );
@@ -159,9 +159,9 @@ INSERT INTO class (Year_Level, Course_Code, Division, Department_ID) VALUES
 ('SY', 'BCA', 'B', 1),
 ('TY', 'BCA', 'A', 1),
 ('TY', 'BCA', 'B', 1),
-('FY', 'BVOC', NULL, 2),
-('SY', 'BVOC', NULL, 2),
-('TY', 'BVOC', NULL, 2);
+('FY', 'BVOC', '', 2),
+('SY', 'BVOC', '', 2),
+('TY', 'BVOC', '', 2);
 
 -- 4. student
 -- Skipped: No insert data found for students.
