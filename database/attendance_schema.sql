@@ -18,7 +18,7 @@ CREATE TABLE department (
 -- -----------------------------
 CREATE TABLE class (
     Class_ID INT AUTO_INCREMENT PRIMARY KEY,
-    Year_Level ENUM('FY', 'SY', 'TY') NOT NULL,
+    Year_Level ENUM('FY', 'SY', 'TY', 'H') NOT NULL,
     Course_Code VARCHAR(20) NOT NULL,
     Division VARCHAR(5) DEFAULT '', -- Use empty string as default
     Department_ID INT NOT NULL,

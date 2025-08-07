@@ -17,8 +17,12 @@ while ($row = $res->fetch_assoc()) {
     $academicYears[] = $row['Year_Label'];
 }
 
-// Levels (static options)
-$levels = ['FY', 'SY', 'TY'];
+// Levels (distinct Year_Level from class)
+$levels = [];
+$res = $conn->query("SELECT DISTINCT Year_Level FROM class ORDER BY FIELD(Year_Level, 'FY', 'SY', 'TY'), Year_Level");
+while ($row = $res->fetch_assoc()) {
+    $levels[] = $row['Year_Level'];
+}
 
 // Courses (all distinct Course_Code from class)
 $courses = [];
@@ -171,18 +175,4 @@ if ($selectedCourse && $selectedSemester) {
         </div>
     </div>
 </form>
-</select>
 </div>
-</div>
-</form>
-</div>
-</div>
-<?php foreach ($levels as $level): ?>
-    <option value="<?php echo $level; ?>" <?php echo ($selectedLevel == $level) ? 'selected' : ''; ?>>
-        <?php echo $level; ?>
-    </option>
-<?php endforeach; ?>
-</select>
-</div>
-</div>
-</form>

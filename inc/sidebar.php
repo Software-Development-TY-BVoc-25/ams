@@ -11,11 +11,11 @@ $sidebar_pages = [
         'label' => 'Mark Attendance',
         'icon' => 'fa-th-list'
     ],
-    [
-        'url' => 'view_attendance',
-        'label' => 'View Attendance',
-        'icon' => 'fa-th-list'
-    ],
+    // [
+    //     'url' => 'view_attendance',
+    //     'label' => 'View Attendance',
+    //     'icon' => 'fa-th-list'
+    // ],
     [
         'url' => 'add_students',
         'label' => 'Add Students Data',
